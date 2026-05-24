@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.community.idle.mapper.StoryMapper">
+
+    <resultMap id="StoryVOResultMap" type="com.community.idle.vo.StoryVO">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="nickname" property="nickname"/>
+        <result column="avatar" property="avatar"/>
+        <result column="content" property="content"/>
+        <result column="images" property="images"/>
+        <result column="like_count" property="likeCount"/>
+        <result column="view_count" property="viewCount"/>
+        <result column="comment_count" property="commentCount"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <select id="selectMyStories" resultMap="StoryVOResultMap">
+        SELECT
+            s.id, s.user_id, u.nickname, u.avatar, s.content, s.images,
+            s.like_count, s.view_count, s.comment_count, s.create_time
+        FROM story s
+        LEFT JOIN `user` u ON s.user_id = u.id
+        <where>
+            s.deleted = 0
+            AND s.user_id = #{userId}
+            AND s.status = 1
+        </where>
+        ORDER BY s.create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="selectStoryDetail" resultMap="StoryVOResultMap">
+        SELECT
+            s.id, s.user_id, u.nickname, u.avatar, s.content, s.images,
+            s.like_count, s.view_count, s.comment_count, s.create_time
+        FROM story s
+        LEFT JOIN `user` u ON s.user_id = u.id
+        <where>
+            s.deleted = 0
+            AND s.id = #{id}
+            AND s.status = 1
+        </where>
+    </select>
+
+</mapper>

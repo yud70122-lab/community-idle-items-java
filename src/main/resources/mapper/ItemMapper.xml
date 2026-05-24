@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.community.idle.mapper.ItemMapper">
+
+    <resultMap id="BaseResultMap" type="com.community.idle.entity.Item">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="title" property="title"/>
+        <result column="description" property="description"/>
+        <result column="category_id" property="categoryId"/>
+        <result column="price" property="price"/>
+        <result column="original_price" property="originalPrice"/>
+        <result column="images" property="images"/>
+        <result column="cover_image" property="coverImage"/>
+        <result column="`condition`" property="condition"/>
+        <result column="trade_type" property="tradeType"/>
+        <result column="`status`" property="status"/>
+        <result column="view_count" property="viewCount"/>
+        <result column="like_count" property="likeCount"/>
+        <result column="favorite_count" property="favoriteCount"/>
+        <result column="latitude" property="latitude"/>
+        <result column="longitude" property="longitude"/>
+        <result column="location" property="location"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <resultMap id="ItemWithDistanceResultMap" type="com.community.idle.entity.Item" extends="BaseResultMap">
+        <result column="distance" property="distance"/>
+        <result column="match_score" property="matchScore"/>
+    </resultMap>
+
+    <sql id="HaversineDistance">
+        <if test="query.userLatitude != null and query.userLongitude != null">
+            , 6371.0 * 2 * ASIN(SQRT(POWER(SIN((#{query.userLatitude} - item.latitude) * PI() / 180 / 2), 2)
+                + COS(#{query.userLatitude} * PI() / 180) * COS(item.latitude * PI() / 180)
+                * POWER(SIN((#{query.userLongitude} - item.longitude) * PI() / 180 / 2), 2))) AS distance
+        </if>
+    </sql>
+
+    <sql id="MatchScore">
+        <if test="query.sortBy == null or query.sortBy == 'match'">
+            , CASE
+                WHEN #{query.userLatitude} IS NOT NULL AND #{query.userLongitude} IS NOT NULL
+                THEN (
+                    (1 - LEAST(6371.0 * 2 * ASIN(SQRT(POWER(SIN((#{query.userLatitude} - item.latitude) * PI() / 180 / 2), 2)
+                    + COS(#{query.userLatitude} * PI() / 180) * COS(item.latitude * PI() / 180)
+                    * POWER(SIN((#{query.userLongitude} - item.longitude) * PI() / 180 / 2), 2))), 50) / 50) * 0.4
+                ) ELSE 0.25
+                END
+              + (COALESCE(uc.credit_score, 60) / 150.0) * 0.3
+              + (1 - DATEDIFF(NOW(), item.create_time) / 30.0) * 0.2
+              + (item.like_count / 100.0) * 0.1
+              AS match_score
+        </if>
+    </sql>
+
+    <select id="selectMyItems" resultMap="BaseResultMap">
+        SELECT
+            id, user_id, title, description, category_id, price, original_price,
+            images, cover_image, `condition`, trade_type, `status`, view_count,
+            like_count, favorite_count, latitude, longitude, location,
+            create_time, update_time, deleted
+        FROM item
+        <where>
+            deleted = 0
+            AND user_id = #{userId}
+            <if test="status != null">
+                AND `status` = #{status}
+            </if>
+        </where>
+        ORDER BY create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="countMyItems" resultType="long">
+        SELECT COUNT(*)
+        FROM item
+        <where>
+            deleted = 0
+            AND user_id = #{userId}
+            <if test="status != null">
+                AND `status` = #{status}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectPriceStatsByItemName" resultType="map">
+        SELECT
+            MIN(price) as minPrice,
+            MAX(price) as maxPrice,
+            AVG(price) as avgPrice
+        FROM item
+        <where>
+            deleted = 0
+            AND `status` = 3
+            AND title LIKE CONCAT('%', #{itemName}, '%')
+        </where>
+    </select>
+
+    <select id="countSoldItemsByName" resultType="int">
+        SELECT COUNT(*)
+        FROM item
+        <where>
+            deleted = 0
+            AND `status` = 3
+            AND title LIKE CONCAT('%', #{itemName}, '%')
+        </where>
+    </select>
+
+    <select id="selectItemList" resultMap="ItemWithDistanceResultMap">
+        SELECT DISTINCT
+            item.id, item.user_id, item.title, item.description, item.category_id,
+            item.price, item.original_price, item.images, item.cover_image,
+            item.`condition`, item.trade_type, item.`status`, item.view_count,
+            item.like_count, item.favorite_count, item.latitude, item.longitude, item.location,
+            item.create_time, item.update_time, item.deleted
+            <include refid="HaversineDistance"/>
+            <include refid="MatchScore"/>
+        FROM item item
+        LEFT JOIN user u ON item.user_id = u.id
+        LEFT JOIN user_credit uc ON u.id = uc.user_id
+        <where>
+            item.deleted = 0
+            <choose>
+                <when test="query.status != null">
+                    AND item.`status` = #{query.status}
+                </when>
+                <otherwise>
+                    AND item.`status` = 1
+                </otherwise>
+            </choose>
+
+            <if test="query.categoryId != null">
+                AND item.category_id = #{query.categoryId}
+            </if>
+
+            <if test="query.keyword != null and query.keyword != ''">
+                AND (item.title LIKE CONCAT('%', #{query.keyword}, '%')
+                     OR item.description LIKE CONCAT('%', #{query.keyword}, '%'))
+            </if>
+
+            <if test="query.userLatitude != null and query.userLongitude != null and query.distance != null">
+                AND 6371.0 * 2 * ASIN(SQRT(POWER(SIN((#{query.userLatitude} - item.latitude) * PI() / 180 / 2), 2)
+                    + COS(#{query.userLatitude} * PI() / 180) * COS(item.latitude * PI() / 180)
+                    * POWER(SIN((#{query.userLongitude} - item.longitude) * PI() / 180 / 2), 2)))
+                    &lt;= #{query.distance}
+            </if>
+
+            <if test="query.conditions != null and query.conditions.size() > 0">
+                AND item.`condition` IN
+                <foreach collection="query.conditions" item="cond" open="(" separator="," close=")">
+                    #{cond}
+                </foreach>
+            </if>
+
+            <if test="query.tradeType != null">
+                AND item.trade_type = #{query.tradeType}
+            </if>
+
+            <if test="query.minPrice != null">
+                AND item.price &gt;= #{query.minPrice}
+            </if>
+
+            <if test="query.maxPrice != null">
+                AND item.price &lt;= #{query.maxPrice}
+            </if>
+        </where>
+        <choose>
+            <when test="query.sortBy == 'distance'">
+                ORDER BY distance ASC, item.create_time DESC
+            </when>
+            <when test="query.sortBy == 'time'">
+                ORDER BY item.create_time DESC
+            </when>
+            <when test="query.sortBy == 'popularity'">
+                ORDER BY item.like_count DESC, item.view_count DESC, item.create_time DESC
+            </when>
+            <otherwise>
+                ORDER BY match_score DESC, item.create_time DESC
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="selectSimilarItems" resultMap="ItemWithDistanceResultMap">
+        SELECT DISTINCT
+            item.id, item.user_id, item.title, item.description, item.category_id,
+            item.price, item.original_price, item.images, item.cover_image,
+            item.`condition`, item.trade_type, item.`status`, item.view_count,
+            item.like_count, item.favorite_count, item.latitude, item.longitude, item.location,
+            item.create_time, item.update_time, item.deleted,
+            (
+                CASE
+                    WHEN item.category_id = #{categoryId} THEN 50
+                    ELSE 0
+                END
+                +
+                CASE
+                    WHEN #{keyword} IS NOT NULL AND #{keyword} != ''
+                         AND (item.title LIKE CONCAT('%', #{keyword}, '%')
+                              OR item.description LIKE CONCAT('%', #{keyword}, '%'))
+                    THEN 30
+                    ELSE 0
+                END
+                +
+                CASE
+                    WHEN #{minPrice} IS NOT NULL AND #{maxPrice} IS NOT NULL
+                         AND item.price &gt;= #{minPrice} AND item.price &lt;= #{maxPrice}
+                    THEN 20
+                    ELSE 0
+                END
+                +
+                (COALESCE(item.view_count, 0) / 1000.0) * 5
+                +
+                (COALESCE(item.like_count, 0) / 100.0) * 5
+                +
+                (1 - DATEDIFF(NOW(), item.create_time) / 30.0) * 10
+            ) AS match_score
+        FROM item item
+        <where>
+            item.deleted = 0
+            AND item.`status` = 1
+            AND item.id != #{itemId}
+
+            <if test="categoryId != null">
+                AND item.category_id = #{categoryId}
+            </if>
+
+            <if test="minPrice != null and maxPrice != null">
+                AND item.price &gt;= #{minPrice}
+                AND item.price &lt;= #{maxPrice}
+            </if>
+        </where>
+        ORDER BY match_score DESC, item.create_time DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

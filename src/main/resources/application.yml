@@ -1,0 +1,117 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+spring:
+  application:
+    name: community-idle-items
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/community_idle?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: root
+    type: com.zaxxer.hikari.HikariDataSource
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      auto-commit: true
+      idle-timeout: 30000
+      pool-name: CommunityIdleHikariCP
+      max-lifetime: 1800000
+      connection-timeout: 30000
+      connection-test-query: SELECT 1
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+      database: 0
+      timeout: 10000ms
+      lettuce:
+        pool:
+          max-active: 20
+          max-wait: -1ms
+          max-idle: 10
+          min-idle: 5
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 100MB
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.community.idle.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+file:
+  upload:
+    path: D:/community-idle-items/uploads
+    allowed-extensions:
+      - jpg
+      - jpeg
+      - png
+      - gif
+      - pdf
+      - doc
+      - docx
+    max-size: 10485760
+
+aliyun:
+  oss:
+    endpoint: oss-cn-hangzhou.aliyuncs.com
+    access-key-id: your-access-key-id
+    access-key-secret: your-access-key-secret
+    bucket-name: community-idle-items
+    url-expire-time: 3600
+
+wechat:
+  appid: your-wechat-appid
+  secret: your-wechat-secret
+  code2session-url: https://api.weixin.qq.com/sns/jscode2session
+  subscribe:
+    send-url: https://api.weixin.qq.com/cgi-bin/message/subscribe/send
+    token-url: https://api.weixin.qq.com/cgi-bin/token
+    appid: your-wechat-appid
+    secret: your-wechat-secret
+    templates:
+      trade-success: TM_TRADE_SUCCESS_001
+      order-reminder: TM_ORDER_REMINDER_002
+      review-result: TM_REVIEW_RESULT_003
+      cancel-notice: TM_CANCEL_NOTICE_004
+      item-off-shelf: TM_ITEM_OFF_SHELF_005
+
+sms:
+  access-key-id: your-access-key-id
+  access-key-secret: your-access-key-secret
+  sign-name: 社区闲置
+  template-code-change-phone: SMS_123456789
+  expire-seconds: 300
+  send-interval-seconds: 60
+  max-send-count-per-day: 10
+
+watermark:
+  enabled: true
+  text: 社区闲置
+  logo-path:
+  opacity: 0.3
+  font-size: 30
+  color: '#FFFFFF'
+  position: BOTTOM_RIGHT
+  margin-x: 20
+  margin-y: 20
+  ffmpeg-path: ffmpeg
+  temp-dir: D:/community-idle-items/temp
