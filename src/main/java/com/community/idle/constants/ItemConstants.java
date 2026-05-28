@@ -21,6 +21,11 @@ public class ItemConstants {
     public static final String LIKE_KEY_PREFIX = "item:like:";
     public static final String FAVORITE_KEY_PREFIX = "item:favorite:";
     public static final String VIEW_COUNT_KEY_PREFIX = "item:view:";
+    public static final String ITEM_DETAIL_CACHE_KEY = "item:detail:";
+    public static final String HOT_ITEMS_CACHE_KEY = "item:hot:";
+    public static final String CACHE_NAME_ITEM_DETAIL = "itemDetail";
+    public static final long ITEM_DETAIL_CACHE_TTL = 3600L;
+    public static final int HOT_ITEM_VIEW_THRESHOLD = 100;
 
     public static String getConditionName(Integer condition) {
         if (condition == null) return "未知";
@@ -52,6 +57,29 @@ public class ItemConstants {
             case 1: return "免费送";
             case 2: return "以物换物";
             case 3: return "出售";
+            default: return "未知";
+        }
+    }
+
+    public static final Integer ORDER_STATUS_PENDING = 0;
+    public static final Integer ORDER_STATUS_PAID = 1;
+    public static final Integer ORDER_STATUS_SHIPPED = 2;
+    public static final Integer ORDER_STATUS_RECEIVED = 3;
+    public static final Integer ORDER_STATUS_COMPLETED = 4;
+    public static final Integer ORDER_STATUS_CANCELLED = 5;
+
+    public static final Integer MIN_CREDIT_SCORE_FOR_EXCHANGE = 60;
+    public static final Integer MIN_CREDIT_SCORE_FOR_BUY = 30;
+
+    public static String getOrderStatusName(Integer status) {
+        if (status == null) return "未知";
+        switch (status) {
+            case 0: return "待支付";
+            case 1: return "待发货";
+            case 2: return "待收货";
+            case 3: return "待评价";
+            case 4: return "已完成";
+            case 5: return "已取消";
             default: return "未知";
         }
     }

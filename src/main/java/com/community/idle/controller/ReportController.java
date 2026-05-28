@@ -1,5 +1,6 @@
 package com.community.idle.controller;
 
+import com.community.idle.annotation.RateLimit;
 import com.community.idle.common.Result;
 import com.community.idle.dto.ReportSubmitDTO;
 import com.community.idle.entity.Report;
@@ -33,6 +34,7 @@ public class ReportController {
     }
 
     @ApiOperation("提交举报")
+    @RateLimit(type = RateLimit.RateLimitType.USER_ID, limit = 3, period = 60, message = "举报操作过于频繁，请稍后再试")
     @PostMapping("/submit")
     public Result<Map<String, Object>> submitReport(
             @ApiIgnore @AuthenticationPrincipal Long userId,

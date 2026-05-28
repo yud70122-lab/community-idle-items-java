@@ -1,5 +1,6 @@
 package com.community.idle.controller;
 
+import com.community.idle.annotation.RateLimit;
 import com.community.idle.common.Result;
 import com.community.idle.service.FavoriteService;
 import io.swagger.annotations.Api;
@@ -23,6 +24,7 @@ public class FavoriteController {
     }
 
     @ApiOperation("添加/取消收藏")
+    @RateLimit(type = RateLimit.RateLimitType.USER_ID, limit = 10, period = 1, message = "收藏操作过于频繁，请稍后再试")
     @PostMapping("/add")
     public Result<Map<String, Object>> addFavorite(
             @ApiIgnore @AuthenticationPrincipal Long userId,

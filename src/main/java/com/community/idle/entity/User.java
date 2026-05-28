@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.community.idle.annotation.Sensitive;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -29,6 +30,7 @@ public class User implements Serializable {
 
     private Integer gender;
 
+    @Sensitive(type = Sensitive.SensitiveType.PHONE)
     private String phone;
 
     private Integer status;

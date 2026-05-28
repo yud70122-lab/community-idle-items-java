@@ -11,6 +11,7 @@ import com.community.idle.mapper.ItemMapper;
 import com.community.idle.service.ItemService;
 import com.community.idle.service.ViewCountService;
 import com.community.idle.service.VisitorService;
+import com.community.idle.annotation.RateLimit;
 import com.community.idle.vo.GenDescVO;
 import com.community.idle.vo.ItemDetailVO;
 import com.community.idle.vo.ItemListVO;
@@ -49,6 +50,7 @@ public class ItemController {
     }
 
     @ApiOperation("发布物品")
+    @RateLimit(type = RateLimit.RateLimitType.USER_ID, limit = 5, period = 60, message = "发布操作过于频繁，请稍后再试")
     @PostMapping("/publish")
     public Result<Map<String, Object>> publishItem(
             @ApiIgnore @AuthenticationPrincipal Long userId,
@@ -119,6 +121,7 @@ public class ItemController {
     }
 
     @ApiOperation("点赞/取消点赞")
+    @RateLimit(type = RateLimit.RateLimitType.USER_ID, limit = 10, period = 1, message = "点赞操作过于频繁，请稍后再试")
     @PostMapping("/like")
     public Result<Map<String, Object>> toggleLike(
             @ApiIgnore @AuthenticationPrincipal Long userId,
@@ -136,12 +139,13 @@ public class ItemController {
     }
 
     @ApiOperation("获取物品详情")
+    @RateLimit(type = RateLimit.RateLimitType.IP, limit = 60, period = 1, message = "请求过于频繁，请稍后再试")
     @GetMapping("/{id}")
     public Result<Item> getItemDetail(
             @AuthenticationPrincipal Long visitorId,
             @PathVariable("id") Long itemId
     ) {
-        Item item = itemMapper.selectById(itemId);
+        Item item = itemService.getItemDetailById(itemId);
         if (item == null) {
             return Result.error("物品不存在");
         }
@@ -154,6 +158,7 @@ public class ItemController {
     }
 
     @ApiOperation("增加物品浏览量")
+    @RateLimit(type = RateLimit.RateLimitType.IP, limit = 30, period = 1, message = "浏览操作过于频繁，请稍后再试")
     @PostMapping("/{id}/view")
     public Result<Map<String, Object>> incrementViewCount(
             @ApiParam("物品ID", required = true) @PathVariable("id") Long itemId

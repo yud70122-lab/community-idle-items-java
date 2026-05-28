@@ -19,6 +19,8 @@ import com.community.idle.vo.ItemDetailVO;
 import com.community.idle.vo.ItemListVO;
 import com.community.idle.vo.PriceRefVO;
 import com.community.idle.vo.TagRecommendVO;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +42,7 @@ public class ItemService {
     private final WxSubMsgUtil wxSubMsgUtil;
     private final AsyncAuditService asyncAuditService;
     private final FavoriteService favoriteService;
+    private final ItemMQProducerService itemMQProducerService;
 
     private static final Map<Long, String> CATEGORY_NAMES = new HashMap<>();
     private static final Map<String, List<String>> KEYWORD_TAG_MAP = new HashMap<>();
@@ -97,13 +100,15 @@ public class ItemService {
     }
 
     public ItemService(ItemMapper itemMapper, UserMapper userMapper, RedisUtil redisUtil, WxSubMsgUtil wxSubMsgUtil,
-                       AsyncAuditService asyncAuditService, FavoriteService favoriteService) {
+                       AsyncAuditService asyncAuditService, FavoriteService favoriteService,
+                       ItemMQProducerService itemMQProducerService) {
         this.itemMapper = itemMapper;
         this.userMapper = userMapper;
         this.redisUtil = redisUtil;
         this.wxSubMsgUtil = wxSubMsgUtil;
         this.asyncAuditService = asyncAuditService;
         this.favoriteService = favoriteService;
+        this.itemMQProducerService = itemMQProducerService;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -137,10 +142,13 @@ public class ItemService {
 
         asyncAuditService.auditItemContent(item.getId());
 
+        itemMQProducerService.sendItemChangeMessage(item.getId(), "INSERT");
+
         return item;
     }
 
     @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(value = ItemConstants.CACHE_NAME_ITEM_DETAIL, key = "#itemId")
     public void auditItem(Long itemId, boolean approved, String remark, Long auditorId) {
         Item item = itemMapper.selectById(itemId);
         if (item == null) {
@@ -169,6 +177,17 @@ public class ItemService {
                     reason
             );
         }
+
+        itemMQProducerService.sendItemChangeMessage(itemId, "UPDATE");
+    }
+
+    @Cacheable(value = ItemConstants.CACHE_NAME_ITEM_DETAIL, key = "#itemId", condition = "#result != null and #result.viewCount >= T(com.community.idle.constants.ItemConstants).HOT_ITEM_VIEW_THRESHOLD", unless = "#result == null")
+    public Item getItemDetailById(Long itemId) {
+        Item item = itemMapper.selectById(itemId);
+        if (item != null && item.getDeleted() != null && item.getDeleted() == 1) {
+            return null;
+        }
+        return item;
     }
 
     public Page<ItemListVO> getItemList(Integer status, Long categoryId, String keyword,
@@ -231,6 +250,7 @@ public class ItemService {
         return voPage;
     }
 
+    @CacheEvict(value = ItemConstants.CACHE_NAME_ITEM_DETAIL, key = "#itemId")
     public boolean toggleLike(Long userId, Long itemId) {
         Item item = itemMapper.selectById(itemId);
         if (item == null || item.getStatus() != ItemConstants.STATUS_ON_SALE) {
@@ -419,6 +439,7 @@ public class ItemService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(value = ItemConstants.CACHE_NAME_ITEM_DETAIL, key = "#itemId")
     public void offlineItem(Long userId, Long itemId) {
         Item item = itemMapper.selectById(itemId);
         if (item == null) {
@@ -438,6 +459,8 @@ public class ItemService {
                 .eq(Item::getId, itemId)
                 .set(Item::getStatus, ItemConstants.STATUS_OFFLINE)
                 .set(Item::getUpdateTime, LocalDateTime.now()));
+
+        itemMQProducerService.sendItemChangeMessage(itemId, "UPDATE");
     }
 
     public ItemDetailVO getItemDetailForEdit(Long userId, Long itemId) {
@@ -468,6 +491,7 @@ public class ItemService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(value = ItemConstants.CACHE_NAME_ITEM_DETAIL, key = "#itemId")
     public Item updateItem(Long userId, Long itemId, ItemEditDTO dto) {
         Item item = itemMapper.selectById(itemId);
         if (item == null) {
@@ -508,6 +532,8 @@ public class ItemService {
         itemMapper.updateById(item);
 
         asyncAuditService.auditItemContent(item.getId());
+
+        itemMQProducerService.sendItemChangeMessage(itemId, "UPDATE");
 
         return item;
     }

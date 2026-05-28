@@ -1,5 +1,6 @@
 package com.community.idle.vo;
 
+import com.community.idle.annotation.Sensitive;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;
@@ -73,4 +74,10 @@ public class ItemListVO {
 
     @ApiModelProperty("位置信息")
     private String location;
+
+    @ApiModelProperty("高亮标题（带em标签）")
+    private String highlightTitle;
+
+    @ApiModelProperty("高亮描述（带em标签）")
+    private String highlightDescription;
 }

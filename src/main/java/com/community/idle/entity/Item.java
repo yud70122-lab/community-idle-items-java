@@ -54,6 +54,8 @@ public class Item implements Serializable {
 
     private String location;
 
+    private String geohash;
+
     @TableField(exist = false)
     private BigDecimal distance;
 

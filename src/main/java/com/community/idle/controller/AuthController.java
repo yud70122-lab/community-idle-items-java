@@ -1,5 +1,6 @@
 package com.community.idle.controller;
 
+import com.community.idle.annotation.RateLimit;
 import com.community.idle.common.Result;
 import com.community.idle.dto.LoginDTO;
 import com.community.idle.service.AuthService;
@@ -24,6 +25,7 @@ public class AuthController {
     }
 
     @ApiOperation("用户登录")
+    @RateLimit(type = RateLimit.RateLimitType.IP, limit = 5, period = 60, message = "登录请求过于频繁，请稍后再试")
     @PostMapping("/login")
     public Result<LoginVO> login(@Validated @RequestBody LoginDTO dto) {
         LoginVO loginVO = authService.login(dto);

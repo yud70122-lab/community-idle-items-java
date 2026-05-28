@@ -10,6 +10,7 @@ import com.community.idle.utils.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -111,6 +112,12 @@ public class ViewCountService {
 
             redisUtil.sSet(VIEW_COUNT_DIRTY_KEY, itemId.toString());
 
+            if (newCount == ItemConstants.HOT_ITEM_VIEW_THRESHOLD) {
+                String cacheKey = ItemConstants.ITEM_DETAIL_CACHE_KEY + itemId;
+                redisUtil.del(cacheKey);
+                log.info("物品达到热门阈值，清除缓存以便重新缓存, itemId: {}, viewCount: {}", itemId, newCount);
+            }
+
             log.debug("浏览量增加成功, itemId: {}, 新值: {}", itemId, newCount);
 
         } catch (BusinessException e) {
@@ -176,6 +183,13 @@ public class ViewCountService {
                         .set(Item::getViewCount, viewCount));
 
                 redisUtil.sRemove(VIEW_COUNT_DIRTY_KEY, itemIdStr);
+
+                if (viewCount >= ItemConstants.HOT_ITEM_VIEW_THRESHOLD) {
+                    String cacheKey = ItemConstants.ITEM_DETAIL_CACHE_KEY + itemId;
+                    redisUtil.del(cacheKey);
+                    log.debug("清除热门物品缓存, itemId: {}", itemId);
+                }
+
                 successCount++;
 
                 log.debug("同步浏览量成功, itemId: {}, count: {}", itemId, viewCount);

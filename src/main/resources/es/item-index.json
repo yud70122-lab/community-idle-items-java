@@ -1,0 +1,176 @@
+{
+  "settings": {
+    "number_of_shards": 3,
+    "number_of_replicas": 1,
+    "refresh_interval": "1s",
+    "max_result_window": 10000,
+    "analysis": {
+      "analyzer": {
+        "ik_max_word": {
+          "type": "ik_max_word"
+        },
+        "ik_smart": {
+          "type": "ik_smart"
+        },
+        "pinyin_analyzer": {
+          "tokenizer": "pinyin_tokenizer"
+        }
+      },
+      "tokenizer": {
+        "pinyin_tokenizer": {
+          "type": "pinyin",
+          "keep_first_letter": true,
+          "keep_separate_first_letter": false,
+          "keep_full_pinyin": true,
+          "keep_original": true,
+          "limit_first_letter_length": 16,
+          "lowercase": true
+        }
+      },
+      "filter": {
+        "edge_ngram_filter": {
+          "type": "edge_ngram",
+          "min_gram": 2,
+          "max_gram": 20
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "id": {
+        "type": "long"
+      },
+      "userId": {
+        "type": "long"
+      },
+      "title": {
+        "type": "text",
+        "analyzer": "ik_max_word",
+        "search_analyzer": "ik_smart",
+        "copy_to": "all_text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          },
+          "pinyin": {
+            "type": "text",
+            "analyzer": "pinyin_analyzer",
+            "search_analyzer": "pinyin_analyzer"
+          }
+        }
+      },
+      "description": {
+        "type": "text",
+        "analyzer": "ik_max_word",
+        "search_analyzer": "ik_smart",
+        "copy_to": "all_text",
+        "fields": {
+          "pinyin": {
+            "type": "text",
+            "analyzer": "pinyin_analyzer",
+            "search_analyzer": "pinyin_analyzer"
+          }
+        }
+      },
+      "all_text": {
+        "type": "text",
+        "analyzer": "ik_max_word",
+        "search_analyzer": "ik_smart"
+      },
+      "categoryId": {
+        "type": "long"
+      },
+      "categoryName": {
+        "type": "keyword",
+        "copy_to": "all_text"
+      },
+      "price": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "originalPrice": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "coverImage": {
+        "type": "keyword",
+        "doc_values": false
+      },
+      "images": {
+        "type": "keyword",
+        "doc_values": false
+      },
+      "condition": {
+        "type": "integer"
+      },
+      "conditionName": {
+        "type": "keyword",
+        "copy_to": "all_text"
+      },
+      "tradeType": {
+        "type": "integer"
+      },
+      "tradeTypeName": {
+        "type": "keyword",
+        "copy_to": "all_text"
+      },
+      "status": {
+        "type": "integer"
+      },
+      "statusName": {
+        "type": "keyword"
+      },
+      "viewCount": {
+        "type": "integer"
+      },
+      "likeCount": {
+        "type": "integer"
+      },
+      "favoriteCount": {
+        "type": "integer"
+      },
+      "location": {
+        "type": "geo_point"
+      },
+      "locationName": {
+        "type": "keyword",
+        "copy_to": "all_text"
+      },
+      "latitude": {
+        "type": "scaled_float",
+        "scaling_factor": 1000000,
+        "doc_values": false
+      },
+      "longitude": {
+        "type": "scaled_float",
+        "scaling_factor": 1000000,
+        "doc_values": false
+      },
+      "nickname": {
+        "type": "keyword"
+      },
+      "avatar": {
+        "type": "keyword",
+        "doc_values": false
+      },
+      "createTime": {
+        "type": "date",
+        "format": "yyyy-MM-dd HH:mm:ss||epoch_millis"
+      },
+      "updateTime": {
+        "type": "date",
+        "format": "yyyy-MM-dd HH:mm:ss||epoch_millis"
+      },
+      "deleted": {
+        "type": "integer"
+      },
+      "matchScore": {
+        "type": "scaled_float",
+        "scaling_factor": 100,
+        "doc_values": false
+      }
+    }
+  }
+}

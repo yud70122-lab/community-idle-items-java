@@ -1,0 +1,92 @@
+{
+  "query": {
+    "function_score": {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "term": {
+                "status": 1
+              }
+            },
+            {
+              "bool": {
+                "should": [
+                  {
+                    "match": {
+                      "title": {
+                        "query": "手机",
+                        "boost": 3.0
+                      }
+                    }
+                  },
+                  {
+                    "match": {
+                      "description": {
+                        "query": "手机",
+                        "boost": 1.0
+                      }
+                    }
+                  }
+                ],
+                "minimum_should_match": 1
+              }
+            },
+            {
+              "terms": {
+                "condition": [1, 2, 3]
+              }
+            },
+            {
+              "range": {
+                "price": {
+                  "gte": 100,
+                  "lte": 5000
+                }
+              }
+            }
+          ]
+        }
+      },
+      "functions": [
+        {
+          "script_score": {
+            "script": {
+              "source": "doc['viewCount'].value * 0.001 + doc['likeCount'].value * 0.01 + doc['favoriteCount'].value * 0.02"
+            }
+          }
+        }
+      ],
+      "score_mode": "sum",
+      "boost_mode": "sum",
+      "min_score": 0.01
+    }
+  },
+  "highlight": {
+    "pre_tags": ["<em>"],
+    "post_tags": ["</em>"],
+    "require_field_match": false,
+    "fields": {
+      "title": {
+        "fragment_size": 50
+      },
+      "description": {
+        "fragment_size": 150
+      }
+    }
+  },
+  "sort": [
+    {
+      "_score": {
+        "order": "desc"
+      }
+    },
+    {
+      "createTime": {
+        "order": "desc"
+      }
+    }
+  ],
+  "from": 0,
+  "size": 20
+}

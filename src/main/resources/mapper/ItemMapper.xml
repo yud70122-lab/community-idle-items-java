@@ -21,6 +21,7 @@
         <result column="latitude" property="latitude"/>
         <result column="longitude" property="longitude"/>
         <result column="location" property="location"/>
+        <result column="geohash" property="geohash"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
         <result column="deleted" property="deleted"/>
@@ -31,11 +32,33 @@
         <result column="match_score" property="matchScore"/>
     </resultMap>
 
+    <resultMap id="ItemListVOResultMap" type="com.community.idle.vo.ItemListVO">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="nickname" property="nickname"/>
+        <result column="avatar" property="avatar"/>
+        <result column="title" property="title"/>
+        <result column="cover_image" property="coverImage"/>
+        <result column="price" property="price"/>
+        <result column="original_price" property="originalPrice"/>
+        <result column="`status`" property="status"/>
+        <result column="`condition`" property="condition"/>
+        <result column="view_count" property="viewCount"/>
+        <result column="like_count" property="likeCount"/>
+        <result column="favorite_count" property="favoriteCount"/>
+        <result column="create_time" property="createTime"/>
+        <result column="distance" property="distance"/>
+        <result column="location" property="location"/>
+        <result column="match_score" property="matchScore"/>
+        <result column="seller_phone" property="sellerPhone"/>
+    </resultMap>
+
     <sql id="HaversineDistance">
         <if test="query.userLatitude != null and query.userLongitude != null">
-            , 6371.0 * 2 * ASIN(SQRT(POWER(SIN((#{query.userLatitude} - item.latitude) * PI() / 180 / 2), 2)
-                + COS(#{query.userLatitude} * PI() / 180) * COS(item.latitude * PI() / 180)
-                * POWER(SIN((#{query.userLongitude} - item.longitude) * PI() / 180 / 2), 2))) AS distance
+            , ST_DISTANCE_SPHERE(
+                POINT(#{query.userLongitude}, #{query.userLatitude}),
+                item.location_point
+              ) / 1000.0 AS distance
         </if>
     </sql>
 
@@ -44,9 +67,10 @@
             , CASE
                 WHEN #{query.userLatitude} IS NOT NULL AND #{query.userLongitude} IS NOT NULL
                 THEN (
-                    (1 - LEAST(6371.0 * 2 * ASIN(SQRT(POWER(SIN((#{query.userLatitude} - item.latitude) * PI() / 180 / 2), 2)
-                    + COS(#{query.userLatitude} * PI() / 180) * COS(item.latitude * PI() / 180)
-                    * POWER(SIN((#{query.userLongitude} - item.longitude) * PI() / 180 / 2), 2))), 50) / 50) * 0.4
+                    (1 - LEAST(ST_DISTANCE_SPHERE(
+                        POINT(#{query.userLongitude}, #{query.userLatitude}),
+                        item.location_point
+                      ) / 1000.0, 50) / 50) * 0.4
                 ) ELSE 0.25
                 END
               + (COALESCE(uc.credit_score, 60) / 150.0) * 0.3
@@ -142,10 +166,18 @@
             </if>
 
             <if test="query.userLatitude != null and query.userLongitude != null and query.distance != null">
-                AND 6371.0 * 2 * ASIN(SQRT(POWER(SIN((#{query.userLatitude} - item.latitude) * PI() / 180 / 2), 2)
-                    + COS(#{query.userLatitude} * PI() / 180) * COS(item.latitude * PI() / 180)
-                    * POWER(SIN((#{query.userLongitude} - item.longitude) * PI() / 180 / 2), 2)))
-                    &lt;= #{query.distance}
+                AND item.geohash LIKE CONCAT(LEFT(ST_GEOHASH(POINT(#{query.userLongitude}, #{query.userLatitude}), 6), 4), '%')
+                AND MBRContains(
+                    ST_Buffer(
+                        POINT(#{query.userLongitude}, #{query.userLatitude}),
+                        #{query.distance} / 111.0
+                    ),
+                    item.location_point
+                )
+                AND ST_DISTANCE_SPHERE(
+                    POINT(#{query.userLongitude}, #{query.userLatitude}),
+                    item.location_point
+                ) / 1000.0 &lt;= #{query.distance}
             </if>
 
             <if test="query.conditions != null and query.conditions.size() > 0">
